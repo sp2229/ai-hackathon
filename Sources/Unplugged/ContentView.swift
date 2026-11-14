@@ -132,7 +132,7 @@ struct HomeView: View {
     @State private var attaching = false
     @Environment(\.openSettings) private var openSettings
 
-    private let columns = [GridItem(.adaptive(minimum: 170, maximum: 230), spacing: 12)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     var body: some View {
         ScrollView {
@@ -145,22 +145,13 @@ struct HomeView: View {
                 }
                 .padding(.top, 32)
 
-                Picker("Category", selection: $model.templateCategory) {
-                    ForEach(TemplateCategory.allCases) { c in
-                        Label(c.rawValue, systemImage: c.icon).tag(c)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 640)
-
                 LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(NoteTemplate.inCategory(model.templateCategory)) { t in
+                    ForEach(NoteTemplate.all) { t in
                         TemplateCard(template: t, selected: model.recordingTemplate.id == t.id)
                             .onTapGesture { model.recordingTemplate = t }
                     }
                 }
-                .frame(maxWidth: 760)
+                .frame(maxWidth: 700)
 
                 ContextTray(docs: model.pendingContext,
                             busy: model.importingContext,

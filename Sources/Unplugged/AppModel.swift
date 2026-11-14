@@ -13,7 +13,6 @@ final class AppModel: ObservableObject {
     @Published var modelStatus: String = ""
     @Published var isDownloading = false
     @Published var recordingTemplate: NoteTemplate = NoteTemplate.find("lecture")
-    @Published var templateCategory: TemplateCategory = .classType
     /// Slides/notes attached before recording; moved onto the next session.
     @Published var pendingContext: [ContextDoc] = []
     @Published var importingContext = false

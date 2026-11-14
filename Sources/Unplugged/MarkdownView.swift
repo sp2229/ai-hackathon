@@ -60,6 +60,8 @@ enum MDBlock {
     case para(String)
     case math(String)
     case table([[String]])
+    case sketch(String)
+    case code(String)
     case rule
 }
 
@@ -74,6 +76,25 @@ enum MarkdownParser {
             let line = raw.trimmingCharacters(in: .whitespaces)
             i += 1
             if line.isEmpty { continue }
+
+            // Fenced blocks: ```sketch → drawing, anything else → code
+            if line.hasPrefix("```") {
+                let lang = line.dropFirst(3).trimmingCharacters(in: .whitespaces).lowercased()
+                var body: [String] = []
+                var closed = false
+                while i < lines.count {
+                    let l = lines[i]; i += 1
+                    if l.trimmingCharacters(in: .whitespaces).hasPrefix("```") { closed = true; break }
+                    body.append(l)
+                }
+                let text = body.joined(separator: "\n")
+                if lang == "sketch" || lang == "drawing" || lang == "diagram" {
+                    out.append(closed ? .sketch(text) : .para("_✏️ Drawing…_"))
+                } else {
+                    out.append(.code(text))
+                }
+                continue
+            }
 
             // Display math: $$...$$ on one line, or spanning lines; also \[ ... \]
             if math, line.hasPrefix("$$") || line.hasPrefix("\\[") {
@@ -190,6 +211,12 @@ struct BlockView: View {
             MathBlock(latex: latex, theme: theme)
         case .table(let rows):
             TableBlock(rows: rows, theme: theme, math: math)
+        case .sketch(let src):
+            SketchView(source: src, ink: theme.text == NoteTheme.ink ? NoteTheme.ink : Color.primary)
+        case .code(let src):
+            Text(src).font(.system(.callout, design: .monospaced))
+                .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
         case .rule:
             Divider().padding(.vertical, 6)
         }

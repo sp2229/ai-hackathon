@@ -12,10 +12,8 @@ struct NotesRenderer: View {
         case .standard: MarkdownView(markdown: markdown, math: template.math)
         case .notebook: NotebookPaper { MarkdownView(markdown: markdown, theme: .notebook, math: true) }
         case .cornell: CornellView(markdown: markdown, math: template.math)
-        case .mindmap: streaming ? AnyView(MarkdownView(markdown: markdown)) : AnyView(MindMapView(markdown: markdown))
         case .flashcards: FlashcardsView(markdown: markdown)
         case .sketchnote: SketchnoteView(markdown: markdown)
-        case .timeline: TimelineView(markdown: markdown)
         }
     }
 }
@@ -151,63 +149,6 @@ struct CornellView: View {
     }
 }
 
-// MARK: - Mind map
-
-struct MindMapView: View {
-    let markdown: String
-    static let palette: [Color] = [.brand, .blue, .orange, .purple, .pink, .teal, .indigo, .mint]
-
-    var body: some View {
-        let sections = Sections.parse(markdown)
-        let center = sections.first { $0.level == 1 }?.title ?? "Topic"
-        let branches = sections.filter { $0.level == 2 }
-
-        if branches.isEmpty {
-            MarkdownView(markdown: markdown)
-        } else {
-            VStack(spacing: 0) {
-                Text(center)
-                    .font(.system(.title2, design: .rounded).weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 26).padding(.vertical, 16)
-                    .background(Capsule().fill(Color.brand.gradient))
-                    .shadow(color: Color.brand.opacity(0.3), radius: 8, y: 3)
-                Rectangle().fill(Color.secondary.opacity(0.3)).frame(width: 2, height: 22)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 14, alignment: .top)], spacing: 14) {
-                    ForEach(Array(branches.enumerated()), id: \.offset) { i, b in
-                        branch(b, color: Self.palette[i % Self.palette.count])
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
-    private func branch(_ b: MDSection, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(b.title)
-                .font(.system(.headline, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(Capsule().fill(color))
-            ForEach(Array(Sections.bullets(b.lines).enumerated()), id: \.offset) { _, item in
-                HStack(alignment: .top, spacing: 8) {
-                    RoundedRectangle(cornerRadius: 1).fill(color.opacity(item.indent == 0 ? 0.8 : 0.35))
-                        .frame(width: item.indent == 0 ? 3 : 2)
-                    RichText(item.text, theme: .standard, math: true,
-                             font: item.indent == 0 ? .callout.weight(.medium) : .caption,
-                             color: item.indent == 0 ? Color.primary : Color.secondary)
-                }
-                .padding(.leading, CGFloat(item.indent) * 14 + 6)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(color.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(color.opacity(0.25)))
-    }
-}
-
 // MARK: - Flashcards
 
 struct Flashcard: Hashable { let q: String; let a: String }
@@ -304,6 +245,10 @@ struct SketchnoteView: View {
     var body: some View {
         let s = Sections.parse(markdown)
         let big = Sections.find(s, ["big idea"])
+        // The model may put the ```sketch block in any section — find it wherever it is.
+        let fence = markdown.range(of: #"```(sketch|drawing|diagram)[\s\S]*?```"#, options: .regularExpression)
+        let diagram = fence.map { String(markdown[$0]) }
+
         let concepts = Sections.find(s, ["concept"]).map { Sections.bullets($0.lines) } ?? []
         let links = Sections.find(s, ["connect"]).map { Sections.bullets($0.lines) } ?? []
         let remember = Sections.find(s, ["remember", "takeaway"]).map { Sections.bullets($0.lines) } ?? []
@@ -315,7 +260,7 @@ struct SketchnoteView: View {
                 if let big {
                     HStack(spacing: 14) {
                         Text("💡").font(.system(size: 40))
-                        RichText(big.body.trimmingCharacters(in: .whitespacesAndNewlines), theme: .standard, math: true,
+                        RichText(Self.stripFences(big.body), theme: .standard, math: true,
                                  font: .custom("Noteworthy-Bold", size: 22))
                     }
                     .padding(20)
@@ -325,6 +270,14 @@ struct SketchnoteView: View {
                             .strokeBorder(style: StrokeStyle(lineWidth: 2.5, dash: [8, 5]))
                             .foregroundStyle(Color.brand)
                     )
+                }
+
+                if let diagram {
+                    label("Diagram")
+                    MarkdownView(markdown: diagram, theme: .notebook, math: true)
+                        .padding(16)
+                        .background(Color(red: 0.995, green: 0.985, blue: 0.95), in: RoundedRectangle(cornerRadius: 14))
+                        .environment(\.colorScheme, .light)
                 }
 
                 label("Key Concepts")
@@ -357,6 +310,11 @@ struct SketchnoteView: View {
                 }
             }
         }
+    }
+
+    static func stripFences(_ t: String) -> String {
+        t.replacingOccurrences(of: #"```[\s\S]*?(```|$)"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func label(_ s: String) -> some View {
@@ -416,59 +374,5 @@ struct SketchnoteView: View {
             .padding(.horizontal, 12).padding(.vertical, 6)
             .background(Color.primary.opacity(0.05), in: Capsule())
             .overlay(Capsule().strokeBorder(Color.primary.opacity(0.15)))
-    }
-}
-
-// MARK: - Timeline
-
-struct TimelineView: View {
-    let markdown: String
-
-    var body: some View {
-        let s = Sections.parse(markdown)
-        let title = s.first { $0.level == 1 }?.title
-        let events = Sections.find(s, ["timeline"]).map { Sections.bullets($0.lines) } ?? []
-        let rest = s.filter { $0.level == 2 && !$0.title.lowercased().contains("timeline") }
-
-        if events.isEmpty {
-            MarkdownView(markdown: markdown)
-        } else {
-            VStack(alignment: .leading, spacing: 18) {
-                if let title { Text(title).font(.system(.title2, design: .rounded).weight(.bold)) }
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(events.enumerated()), id: \.offset) { i, e in
-                        let (when, what) = split(e.text)
-                        HStack(alignment: .top, spacing: 14) {
-                            VStack(spacing: 0) {
-                                Circle().fill(Color.brand).frame(width: 14, height: 14)
-                                    .overlay(Circle().strokeBorder(.white, lineWidth: 2))
-                                if i < events.count - 1 {
-                                    Rectangle().fill(Color.brand.opacity(0.3)).frame(width: 2).frame(minHeight: 40)
-                                }
-                            }
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(when).font(.callout.weight(.bold)).foregroundStyle(Color.brand)
-                                RichText(what, theme: .standard, math: false)
-                            }
-                            .padding(.bottom, 16)
-                        }
-                    }
-                }
-                ForEach(Array(rest.enumerated()), id: \.offset) { _, sec in
-                    MarkdownView(markdown: "## \(sec.title)\n\(sec.body)")
-                }
-            }
-        }
-    }
-
-    private func split(_ s: String) -> (String, String) {
-        if s.hasPrefix("**"), let end = s.dropFirst(2).range(of: "**") {
-            let when = String(s[s.index(s.startIndex, offsetBy: 2)..<end.lowerBound])
-            var what = String(s[end.upperBound...]).trimmingCharacters(in: .whitespaces)
-            for p in ["— ", "– ", "- ", ": "] where what.hasPrefix(p) { what = String(what.dropFirst(p.count)) }
-            return (when, what)
-        }
-        for sep in [" — ", " – ", ": "] { if let r = s.range(of: sep) { return (String(s[..<r.lowerBound]), String(s[r.upperBound...])) } }
-        return ("", s)
     }
 }

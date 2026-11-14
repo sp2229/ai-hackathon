@@ -32,18 +32,26 @@ sandbox-exec -p "$P" .build/arm64-apple-macosx/release/Unplugged --selftest audi
 - **Confidential meetings:** client, legal, HR, and medical conversations never leave the laptop.
 - **Travel:** works on planes.
 
-## Note templates (25, based on published note-taking methods)
-Pick a template before recording, or switch afterwards. Switching only regenerates the notes and reuses the existing transcript.
-
-| Category | Templates | Layout |
+## Six note templates
+| Template | Best for | Looks like |
 |---|---|---|
-| **Study Methods** | Cornell Notes (Pauk, 1962) · Outline · Flashcards (testing effect, Roediger & Karpicke 2006) · Feynman Explainer · SQ3R (Robinson, 1946) · Comparison Chart | Cornell = two-column cue/notes + summary; Flashcards = click-to-flip cards; Chart = table |
-| **Visual** | Mind Map (Buzan, 1974) · Sketchnote (Rohde 2012; dual coding, Paivio 1971) · Timeline | Branching map, icon cards + connections + sticky notes, vertical timeline |
-| **Class Types** | Lecture · STEM Notebook (worked-example effect, Sweller & Cooper 1985) · Engineering Problem (Given/Find/Solution) · Case Brief (IRAC) · Research Talk · Language Class · Lab Session | STEM templates render **handwritten-style notes on lined paper**, with equations typeset in Zapf's *Euler* math font |
-| **Work** | Meeting · Standup · Retrospective · Client Call · Site Visit · Interview · Brainstorm (KJ method) | Speaker labels via Argmax SpeakerKit |
-| **Accessible** | Plain Language · TL;DR Focus (ADHD-friendly, chunking) · Quick Note | Short sentences, bold keywords, one next step |
+| **Meeting** | Calls, standups, project meetings | Summary, decisions, action items with owners (speaker labels via Argmax SpeakerKit) |
+| **Lecture** | Classes, STEM, engineering | Handwritten-style notes on lined paper, equations in the Euler math font, **drawings**, worked example |
+| **Cornell** | Studying (Pauk, 1962) | Two-column cue/notes layout with a summary strip |
+| **Study Cards** | Exam prep (testing effect, Roediger & Karpicke 2006) | Click-to-flip flashcards |
+| **Visual** | Visual learners (dual coding, Paivio 1971) | Big idea, a drawing, emoji concept cards, sticky notes |
+| **Site Visit** | Field inspections | Dimensioned sketch, observations, hazards by severity, follow-ups |
 
-Equations are written by Bonsai in LaTeX and drawn natively with [SwiftMath](https://github.com/mgriebling/SwiftMath). There's no web view and no network.
+Switch templates at any time. Switching only regenerates the notes and reuses the existing transcript.
+
+## Drawings from speech
+When the speaker describes something physical, such as *"an 18 × 18 in concrete column, 12 ft tall, on a spring with k = 500 kip/in, with a 200 kip axial load"*, Bonsai writes a tiny sketch description:
+```sketch
+column "18x18 in" height "12 ft"
+support bottom spring "k = 500 kip/in"
+load top "P = 200 kip"
+```
+Unplugged then lays it out and draws it natively: the member, the spring, the load arrow, a height dimension, and a cross-section inset with dimensions. Beams (pin/roller/fixed/spring supports, point and distributed loads, span) and process flows (`flow "A" -> "B" -> "C"`) work the same way. The parser tolerates the small variations a 4B model produces, and raw shapes (box, arrow, spring, dimension, and so on) are available for anything else. Drawings need no image model and no network.
 
 ## Record computer audio (Zoom, Teams, Meet, recordings)
 Choose **Microphone**, **Computer audio**, or **Both** before recording:

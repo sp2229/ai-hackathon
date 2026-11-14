@@ -58,15 +58,11 @@ struct SessionView: View {
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
             HStack(spacing: 8) {
                 Menu {
-                    ForEach(TemplateCategory.allCases) { c in
-                        Section(c.rawValue) {
-                            ForEach(NoteTemplate.inCategory(c)) { t in
-                                Button {
-                                    Task { await model.summarize(id, template: t) }
-                                } label: {
-                                    Label(t.name, systemImage: t.icon)
-                                }
-                            }
+                    ForEach(NoteTemplate.all) { t in
+                        Button {
+                            Task { await model.summarize(id, template: t) }
+                        } label: {
+                            Label(t.name, systemImage: t.icon)
                         }
                     }
                 } label: {

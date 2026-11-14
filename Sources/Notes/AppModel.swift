@@ -25,6 +25,9 @@ final class AppModel: ObservableObject {
     @AppStorage("whisperModel") var whisperModelRaw: String = WhisperChoice.base.rawValue
     @AppStorage("bonsaiModel") var bonsaiModelRaw: String = BonsaiSize.b4.rawValue
     @AppStorage("diarizationEnabled") var diarizationEnabled: Bool = true
+    @Published var audioSource: AudioSource = AudioSource(rawValue: UserDefaults.standard.string(forKey: "audioSource") ?? "") ?? .microphone {
+        didSet { UserDefaults.standard.set(audioSource.rawValue, forKey: "audioSource") }
+    }
 
     var whisperModel: WhisperChoice { WhisperChoice(rawValue: whisperModelRaw) ?? .base }
     var bonsaiModel: BonsaiSize {
@@ -63,37 +66,46 @@ final class AppModel: ObservableObject {
     // MARK: - Recording
 
     func startRecording() async {
-        guard await AudioRecorder.requestPermission() else {
-            alert = "Microphone access is off. Enable it in System Settings › Privacy & Security › Microphone."
-            return
+        let src = audioSource
+        if src != .system {
+            guard await AudioRecorder.requestPermission() else {
+                alert = "Microphone access is off. Enable it in System Settings › Privacy & Security › Microphone."
+                return
+            }
         }
         let t = recordingTemplate
         var session = Session(title: Self.defaultTitle(for: t), templateID: t.id)
         session.context = pendingContext.isEmpty ? nil : pendingContext
+        recorder.onError = { [weak self] msg in self?.alert = msg }
         do {
-            try recorder.start(to: Paths.audio(for: session))
+            try await recorder.start(to: Paths.audio(for: session), source: src)
             recordingSession = session
             pendingContext = []
         } catch {
+            SessionStore.delete(session)
             alert = error.localizedDescription
         }
     }
 
     func stopRecording() {
         guard var session = recordingSession else { return }
-        session.duration = recorder.stop()
         recordingSession = nil
-        sessions.insert(session, at: 0)
-        SessionStore.save(session)
-        selection = session.id
-        Task { await process(session.id) }
+        Task {
+            session.duration = await recorder.stop()
+            sessions.insert(session, at: 0)
+            SessionStore.save(session)
+            selection = session.id
+            await process(session.id)
+        }
     }
 
     func cancelRecording() {
         guard let session = recordingSession else { return }
-        recorder.stop()
         recordingSession = nil
-        SessionStore.delete(session)
+        Task {
+            await recorder.stop()
+            SessionStore.delete(session)
+        }
     }
 
     func importAudio(_ url: URL) {

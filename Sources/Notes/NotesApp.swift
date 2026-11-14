@@ -39,6 +39,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { await SelfTest.run(args: args) }
             return
         }
+        if let i = args.firstIndex(of: "--mix"), i + 3 < args.count {
+            do { try AudioMixer.mix(URL(fileURLWithPath: args[i + 1]), URL(fileURLWithPath: args[i + 2]), into: URL(fileURLWithPath: args[i + 3])); print("mixed") }
+            catch { print("MIX FAILED: \(error)") }
+            exit(0)
+        }
+        if let i = args.firstIndex(of: "--capture-test"), i + 3 < args.count {
+            // --capture-test <seconds> <microphone|system|both> <out.wav>
+            Task { @MainActor in
+                let rec = AudioRecorder()
+                let src = AudioSource(rawValue: args[i + 2]) ?? .system
+                do {
+                    try await rec.start(to: URL(fileURLWithPath: args[i + 3]), source: src)
+                    print("capturing \(src.label) for \(args[i + 1])s…")
+                    try await Task.sleep(nanoseconds: UInt64((Double(args[i + 1]) ?? 5) * 1e9))
+                    let d = await rec.stop()
+                    print(String(format: "captured %.1fs → %@", d, args[i + 3]))
+                } catch { print("CAPTURE FAILED: \(error.localizedDescription)") }
+                exit(0)
+            }
+            return
+        }
         if let i = args.firstIndex(of: "--extract"), i + 1 < args.count {
             // Print what Notes extracts from an attachment (PDF, pptx, docx, image, text)
             Task {

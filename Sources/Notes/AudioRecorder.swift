@@ -1,17 +1,53 @@
 import AVFoundation
 import Foundation
 
+enum AudioSource: String, CaseIterable, Identifiable {
+    case microphone, system, both
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .microphone: return "Microphone"
+        case .system: return "Computer audio"
+        case .both: return "Both"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .microphone: return "mic.fill"
+        case .system: return "speaker.wave.2.fill"
+        case .both: return "person.2.wave.2.fill"
+        }
+    }
+    var hint: String {
+        switch self {
+        case .microphone: return "In-person lectures, meetings, and site visits."
+        case .system: return "Anything playing on this Mac — e.g. a Zoom recording in your browser."
+        case .both: return "Live Zoom / Teams / Meet calls: their audio + your voice."
+        }
+    }
+}
+
 /// Records straight to 16 kHz mono PCM — the exact format Whisper consumes —
 /// so no resampling work is needed later and files stay small (~1.9 MB/min).
+/// Sources: microphone (AVAudioRecorder), computer audio (ScreenCaptureKit), or both (mixed on stop).
 @MainActor
 final class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var isPaused = false
     @Published var elapsed: TimeInterval = 0
     @Published var levels: [Float] = Array(repeating: 0, count: 48)
+    @Published var source: AudioSource = .microphone
 
-    private var recorder: AVAudioRecorder?
+    private var mic: AVAudioRecorder?
+    private var system: SystemAudioCapture?
     private var timer: Timer?
+    private var outputURL: URL?
+    private var micURL: URL?
+    private var systemURL: URL?
+    private var startedAt = Date()
+    private var pausedTotal: TimeInterval = 0
+    private var pausedAt: Date?
+    var onError: ((String) -> Void)?
 
     static func requestPermission() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
@@ -21,22 +57,45 @@ final class AudioRecorder: NSObject, ObservableObject {
         }
     }
 
-    func start(to url: URL) throws {
-        let settings: [String: Any] = [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: 16_000,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false,
-        ]
-        let rec = try AVAudioRecorder(url: url, settings: settings)
-        rec.isMeteringEnabled = true
-        guard rec.record() else { throw NSError(domain: "Notes", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not start recording. Check microphone permission in System Settings › Privacy."]) }
-        recorder = rec
+    private static let wavSettings: [String: Any] = [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVSampleRateKey: 16_000,
+        AVNumberOfChannelsKey: 1,
+        AVLinearPCMBitDepthKey: 16,
+        AVLinearPCMIsFloatKey: false,
+        AVLinearPCMIsBigEndianKey: false,
+    ]
+
+    func start(to url: URL, source: AudioSource) async throws {
+        self.source = source
+        outputURL = url
+        let dir = url.deletingLastPathComponent()
+        micURL = source == .both ? dir.appendingPathComponent("mic.wav") : url
+        systemURL = source == .both ? dir.appendingPathComponent("system.wav") : url
+
+        if source != .microphone {
+            let cap = SystemAudioCapture()
+            cap.onError = { [weak self] msg in Task { @MainActor in self?.onError?(msg) } }
+            try await cap.start(to: systemURL!)
+            system = cap
+        }
+        if source != .system {
+            let rec = try AVAudioRecorder(url: micURL!, settings: Self.wavSettings)
+            rec.isMeteringEnabled = true
+            guard rec.record() else {
+                await system?.stop(); system = nil
+                throw NSError(domain: "Notes", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                    "Could not start recording. Check microphone permission in System Settings › Privacy & Security."])
+            }
+            mic = rec
+        }
+
         isRecording = true
         isPaused = false
         elapsed = 0
+        startedAt = Date()
+        pausedTotal = 0
+        pausedAt = nil
         levels = Array(repeating: 0, count: levels.count)
         // 10 Hz UI refresh is plenty for a level meter and keeps CPU wakeups low.
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -45,31 +104,60 @@ final class AudioRecorder: NSObject, ObservableObject {
     }
 
     func togglePause() {
-        guard let rec = recorder else { return }
-        if isPaused { rec.record() } else { rec.pause() }
+        if isPaused {
+            mic?.record()
+            if let p = pausedAt { pausedTotal += Date().timeIntervalSince(p) }
+            pausedAt = nil
+        } else {
+            mic?.pause()
+            pausedAt = Date()
+        }
         isPaused.toggle()
+        system?.setPaused(isPaused)
     }
 
+    /// Stops all sources, mixes if needed, and returns the duration in seconds.
     @discardableResult
-    func stop() -> TimeInterval {
-        let duration = recorder?.currentTime ?? elapsed
-        recorder?.stop()
-        recorder = nil
+    func stop() async -> TimeInterval {
         timer?.invalidate()
         timer = nil
+        mic?.stop()
+        mic = nil
+        await system?.stop()
+        system = nil
         isRecording = false
         isPaused = false
-        return max(duration, elapsed)
+
+        if source == .both, let a = micURL, let b = systemURL, let out = outputURL {
+            do {
+                try AudioMixer.mix(a, b, into: out)
+                try? FileManager.default.removeItem(at: a)
+                try? FileManager.default.removeItem(at: b)
+            } catch {
+                // Fall back to whichever track exists
+                try? FileManager.default.moveItem(at: b, to: out)
+            }
+        }
+        if let out = outputURL {
+            let d = await Self.duration(of: out)
+            if d > 0 { return d }
+        }
+        return elapsed
     }
 
     private func tick() {
-        guard let rec = recorder else { return }
-        elapsed = rec.currentTime
-        rec.updateMeters()
-        let db = rec.averagePower(forChannel: 0)            // -160...0
-        let norm = isPaused ? 0 : max(0, min(1, (db + 50) / 50))
+        let paused = pausedAt.map { Date().timeIntervalSince($0) } ?? 0
+        elapsed = Date().timeIntervalSince(startedAt) - pausedTotal - paused
+
+        var level: Float = 0
+        if let m = mic {
+            m.updateMeters()
+            let db = m.averagePower(forChannel: 0)            // -160...0
+            level = max(0, min(1, (db + 50) / 50))
+        }
+        if let s = system { level = max(level, s.level) }
         levels.removeFirst()
-        levels.append(norm)
+        levels.append(isPaused ? 0 : level)
     }
 
     static func duration(of url: URL) async -> Double {

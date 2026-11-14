@@ -168,13 +168,25 @@ struct HomeView: View {
                             onRemove: { model.removeContext($0, from: nil) })
                     .frame(maxWidth: 760)
 
+                VStack(spacing: 6) {
+                    Picker("Record from", selection: $model.audioSource) {
+                        ForEach(AudioSource.allCases) { src in
+                            Label(src.label, systemImage: src.icon).tag(src)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 420)
+                    Text(model.audioSource.hint).font(.caption).foregroundStyle(.secondary)
+                }
+
                 Button {
                     Task { await model.startRecording() }
                 } label: {
                     ZStack {
                         Circle().fill(Color.red.gradient).frame(width: 84, height: 84)
                             .shadow(color: .red.opacity(0.35), radius: 12, y: 4)
-                        Image(systemName: "mic.fill").font(.system(size: 32)).foregroundStyle(.white)
+                        Image(systemName: model.audioSource.icon).font(.system(size: 32)).foregroundStyle(.white)
                     }
                 }
                 .buttonStyle(.plain)
@@ -403,7 +415,8 @@ struct RecordingView: View {
                 .help(recorder.isPaused ? "Resume" : "Pause")
             }
 
-            Text(recorder.isPaused ? "Paused" : "Recording · audio stays on this Mac")
+            Label(recorder.isPaused ? "Paused" : "Recording \(recorder.source.label.lowercased()) · audio stays on this Mac",
+                  systemImage: recorder.source.icon)
                 .font(.callout).foregroundStyle(.secondary)
             Spacer()
         }

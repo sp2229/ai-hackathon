@@ -96,7 +96,7 @@ actor Transcriber {
                     diarize: Bool,
                     status: @escaping @Sendable (String) -> Void) async throws -> TranscriptionOutput {
         guard isWhisperReady(model) else {
-            throw NSError(domain: "Notes", code: 2, userInfo: [NSLocalizedDescriptionKey:
+            throw NSError(domain: "Unplugged", code: 2, userInfo: [NSLocalizedDescriptionKey:
                 "Whisper model \(model.rawValue) isn't downloaded yet. Open Settings › Models and download it once (requires internet)."])
         }
 
@@ -118,7 +118,7 @@ actor Transcriber {
         )
         let results = await whisper.transcribe(audioArrays: [audio], decodeOptions: options)
         guard let result = results.first ?? nil else {
-            throw NSError(domain: "Notes", code: 3, userInfo: [NSLocalizedDescriptionKey: "Transcription failed."])
+            throw NSError(domain: "Unplugged", code: 3, userInfo: [NSLocalizedDescriptionKey: "Transcription failed."])
         }
         let transcribeSeconds = Date().timeIntervalSince(t0)
         var diarizeSeconds = 0.0

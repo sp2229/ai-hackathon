@@ -2,12 +2,12 @@ import SwiftUI
 import AppKit
 
 @main
-struct NotesApp: App {
+struct UnpluggedApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        WindowGroup("Notes") {
+        WindowGroup("Unplugged") {
             ContentView()
                 .environmentObject(model)
                 .environmentObject(model.recorder)

@@ -84,7 +84,7 @@ final class AudioRecorder: NSObject, ObservableObject {
             rec.isMeteringEnabled = true
             guard rec.record() else {
                 await system?.stop(); system = nil
-                throw NSError(domain: "Notes", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                throw NSError(domain: "Unplugged", code: 1, userInfo: [NSLocalizedDescriptionKey:
                     "Could not start recording. Check microphone permission in System Settings › Privacy & Security."])
             }
             mic = rec

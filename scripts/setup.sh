@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup (needs internet ONCE). After this, Notes runs fully offline.
+# One-time setup (needs internet ONCE). After this, Unplugged runs fully offline.
 # Downloads:
 #   - PrismML's llama.cpp fork (llama-server, Metal build) — required for Ternary Bonsai 2
 #   - Ternary Bonsai 2 GGUF model (default 4B, ~1.15 GB; set BONSAI_MODEL=2B or 9B)
@@ -8,7 +8,7 @@ set -euo pipefail
 
 BONSAI_MODEL="${BONSAI_MODEL:-4B}"
 LLAMA_TAG="${LLAMA_TAG:-prism-b12128-d7b2896}"
-SUPPORT="$HOME/Library/Application Support/Notes"
+SUPPORT="$HOME/Library/Application Support/Unplugged"
 BIN="$SUPPORT/bin"
 LLM="$SUPPORT/models/llm"
 mkdir -p "$BIN" "$LLM"
@@ -36,4 +36,4 @@ if [ ! -f "$LLM/$FILE" ]; then
 fi
 echo "✓ Bonsai model: $LLM/$FILE"
 echo
-echo "Done. Next: ./scripts/build_app.sh && open build/Notes.app"
+echo "Done. Next: ./scripts/build_app.sh && open build/Unplugged.app"

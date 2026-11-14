@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// `Notes --selftest <audio> [template] [--context file]... [--render out.png]`
+/// `Unplugged --selftest <audio> [template] [--context file]... [--render out.png]`
 /// Runs the whole on-device pipeline without UI, prints the result, and optionally
 /// renders the notes view to a PNG. Handy for verifying an offline setup.
 enum SelfTest {
@@ -56,7 +56,7 @@ enum SelfTest {
         exit(0)
     }
 
-    /// `Notes --render-md <file.md> <template> <out.png>` — render existing Markdown (no models needed).
+    /// `Unplugged --render-md <file.md> <template> <out.png>` — render existing Markdown (no models needed).
     static func renderMarkdown(args: [String]) async {
         guard let i = args.firstIndex(of: "--render-md"), i + 3 < args.count,
               let md = try? String(contentsOfFile: args[i + 1], encoding: .utf8) else { exit(2) }

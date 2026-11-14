@@ -2,10 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>Notes</string>
-    <key>CFBundleDisplayName</key><string>Notes</string>
-    <key>CFBundleIdentifier</key><string>edu.cornell.hackathon.notes</string>
-    <key>CFBundleExecutable</key><string>Notes</string>
+    <key>CFBundleName</key><string>Unplugged</string>
+    <key>CFBundleDisplayName</key><string>Unplugged</string>
+    <key>CFBundleIdentifier</key><string>edu.cornell.hackathon.unplugged</string>
+    <key>CFBundleExecutable</key><string>Unplugged</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -13,8 +13,8 @@
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Notes records audio so it can transcribe and summarize it entirely on this Mac. Audio never leaves your device.</string>
+    <string>Unplugged records audio so it can transcribe and summarize it entirely on this Mac. Audio never leaves your device.</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>Notes can record audio playing on this Mac (for example a Zoom call or recording) to transcribe it on-device. Audio never leaves your Mac.</string>
+    <string>Unplugged can record audio playing on this Mac (for example a Zoom call or recording) to transcribe it on-device. Audio never leaves your Mac.</string>
 </dict>
 </plist>

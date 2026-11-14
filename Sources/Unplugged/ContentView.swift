@@ -23,7 +23,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .textBackgroundColor))
         }
-        .alert("Notes", isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } })) {
+        .alert("Unplugged", isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.alert ?? "")
@@ -347,7 +347,7 @@ struct SetupCallout: View {
             if !bonsaiReady {
                 Text("• Install the Bonsai LLM: run `scripts/setup.sh` in the repo.")
             }
-            Text("After that, Notes works with Wi-Fi off.").foregroundStyle(.secondary)
+            Text("After that, Unplugged works with Wi-Fi off.").foregroundStyle(.secondary)
             Button("Open Settings", action: openSettings)
         }
         .font(.callout)

@@ -1,11 +1,11 @@
 import Foundation
 
-/// All on-disk locations. Everything lives under ~/Library/Application Support/Notes —
+/// All on-disk locations. Everything lives under ~/Library/Application Support/Unplugged —
 /// nothing is ever uploaded anywhere.
 enum Paths {
     static let support: URL = {
         let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Notes", isDirectory: true)
+            .appendingPathComponent("Unplugged", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }()

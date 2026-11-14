@@ -158,7 +158,7 @@ enum DocumentImporter {
     }
 
     private static func err(_ msg: String) -> NSError {
-        NSError(domain: "Notes", code: 10, userInfo: [NSLocalizedDescriptionKey: msg])
+        NSError(domain: "Unplugged", code: 10, userInfo: [NSLocalizedDescriptionKey: msg])
     }
 
 }

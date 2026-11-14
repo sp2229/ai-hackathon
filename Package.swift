@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Notes",
+    name: "Unplugged",
     platforms: [.macOS(.v14)],
     dependencies: [
         // Argmax on-device speech SDK (WhisperKit = transcription, SpeakerKit = diarization).
@@ -13,13 +13,13 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "Notes",
+            name: "Unplugged",
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
                 .product(name: "SpeakerKit", package: "argmax-oss-swift"),
                 .product(name: "SwiftMath", package: "SwiftMath"),
             ],
-            path: "Sources/Notes"
+            path: "Sources/Unplugged"
         ),
     ]
 )

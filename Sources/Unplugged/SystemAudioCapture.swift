@@ -26,11 +26,11 @@ final class SystemAudioCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unc
         do {
             content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         } catch {
-            throw NSError(domain: "Notes", code: 20, userInfo: [NSLocalizedDescriptionKey:
-                "Notes needs permission to record computer audio. Open System Settings › Privacy & Security › Screen & System Audio Recording, turn on Notes, then quit and reopen Notes."])
+            throw NSError(domain: "Unplugged", code: 20, userInfo: [NSLocalizedDescriptionKey:
+                "Unplugged needs permission to record computer audio. Open System Settings › Privacy & Security › Screen & System Audio Recording, turn on Unplugged, then quit and reopen Unplugged."])
         }
         guard let display = content.displays.first else {
-            throw NSError(domain: "Notes", code: 21, userInfo: [NSLocalizedDescriptionKey: "No display found for audio capture."])
+            throw NSError(domain: "Unplugged", code: 21, userInfo: [NSLocalizedDescriptionKey: "No display found for audio capture."])
         }
 
         // Don't record our own app's sounds.
